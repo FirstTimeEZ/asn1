@@ -36,7 +36,8 @@ export const TAGS = {
     UTC_TIME: 0x17,                 // UTCTime
     BMP_STRING: 0x1E,               // BMPString
     ZERO: 0x00,                     // Zero
-    CONTEXT_SPECIFIC_ZERO: 0xA0     // ContextSpecificZero
+    CONTEXT_SPECIFIC_ZERO: 0xA0,    // ContextSpecificZero
+    CONTEXT_SPECIFIC_THREE: 0xA3    // ExtensionsContext
 };
 
 export function encodeDERBitString(data) {
