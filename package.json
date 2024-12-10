@@ -1,7 +1,7 @@
 {
   "name": "simple-asn1",
   "author": "FirstTimeEZ",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Simple Abstract Syntax Notation One (ASN.1)",
   "main": "asn1.js",
   "type": "module",
@@ -15,7 +15,7 @@
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/FirstTimeEZ/csr.git"
+    "url": "git+https://github.com/FirstTimeEZ/asn1.git"
   },
   "homepage": "https://github.com/FirstTimeEZ/server-ssl"
 }
