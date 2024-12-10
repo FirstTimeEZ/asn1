@@ -261,7 +261,7 @@ export function decodeAKI(certBuffer) {
 
     const inner2 = slice1.slice(offset1 + 1, offset1 + 1 + seq7.length + 2);
 
-    return inner2;
+    return inner2.toString('hex');
 
     function walkExtensions(inner) {
         const seq7 = readASN1Length(inner, 1);

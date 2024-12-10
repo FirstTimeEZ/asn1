@@ -1,7 +1,7 @@
 {
   "name": "simple-asn1",
   "author": "FirstTimeEZ",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Simple Abstract Syntax Notation One (ASN.1)",
   "main": "asn1.js",
   "type": "module",
