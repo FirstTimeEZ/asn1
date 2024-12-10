@@ -254,7 +254,7 @@ export function decodeAKI(certBuffer) {
     const slice1 = inner1.slice(offset1 + 2);
 
     offset1 = 0;
-    console.log(slice1);
+
     const seq7 = readASN1Length(slice1, offset1);
 
     offset1 += seq7.lengthOfLength + 2;
