@@ -168,7 +168,6 @@ export function skipDERLength(buffer) {
 
 export function decodeSerialNumber(certBuffer) {
     if (certBuffer[0] != 0x30) {
-        console.error("Unexpected start of buffer");
         return undefined;
     }
 
@@ -191,14 +190,12 @@ export function decodeSerialNumber(certBuffer) {
     offset += seq2.lengthOfLength + 2;
 
     if (certBuffer[offset - 1] !== TAGS.CONTEXT_SPECIFIC_ZERO) {
-        console.error("Expected context specific zero");
         return undefined;
     }
 
     offset += certBuffer[offset] + 2;
 
     if (certBuffer[offset - 1] != 0x02) {
-        console.error("Expected INTEGER");
         return undefined;
     }
 
@@ -207,7 +204,6 @@ export function decodeSerialNumber(certBuffer) {
 
 export function decodeAKI(certBuffer) {
     if (certBuffer[0] != TAGS.SEQUENCE) {
-        console.error("Unexpected start of buffer");
         return undefined;
     }
 
@@ -230,14 +226,12 @@ export function decodeAKI(certBuffer) {
     offset += seq2.lengthOfLength + 2;
 
     if (certBuffer[offset - 1] !== TAGS.CONTEXT_SPECIFIC_ZERO) {
-        console.error("Expected context specific zero");
         return undefined;
     }
 
     offset += certBuffer[offset] + 2;
 
     if (certBuffer[offset - 1] != 0x02) {
-        console.error("Expected INTEGER");
         return undefined;
     }
 
@@ -324,7 +318,6 @@ export function pemToBuffer(pemCertificate) {
 
 export function readASN1Length(buffer, offset) {
     if (offset >= buffer.length) {
-        console.log("Offset is out of bounds");
         return undefined;
     }
 
@@ -336,12 +329,10 @@ export function readASN1Length(buffer, offset) {
 
     const lengthOfLength = lengthByte & 0x7F;
     if (lengthOfLength === 0) {
-        console.log("Indefinite length is not supported");
         return undefined;
     }
 
     if (offset + lengthOfLength >= buffer.length) {
-        console.log("Length of length exceeds buffer size");
         return undefined;
     }
 
@@ -355,7 +346,6 @@ export function readASN1Length(buffer, offset) {
 
 export function bytesToOID(byteArray) {
     if (byteArray[0] !== 0x06) {
-        console.log("The first byte must be 0x06 for OID.");
         return undefined;
     }
 
