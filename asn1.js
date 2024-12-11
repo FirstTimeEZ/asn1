@@ -168,27 +168,38 @@ export function skipDERLength(buffer) {
 
 export function decodeSerialNumber(certBuffer) {
     if (certBuffer[0] != 0x30) {
-        throw new Error("Unexpected start of buffer");
+        console.error("Unexpected start of buffer");
+        return undefined;
     }
 
     let offset = 1;
 
     const seq1 = readASN1Length(certBuffer, offset);
 
+    if (seq1 === undefined) {
+        return undefined;
+    }
+
     offset += seq1.lengthOfLength + 2;
 
     const seq2 = readASN1Length(certBuffer, offset);
 
+    if (seq2 === undefined) {
+        return undefined;
+    }
+
     offset += seq2.lengthOfLength + 2;
 
     if (certBuffer[offset - 1] !== TAGS.CONTEXT_SPECIFIC_ZERO) {
-        throw new Error("Expected context specific zero");
+        console.error("Expected context specific zero");
+        return undefined;
     }
 
     offset += certBuffer[offset] + 2;
 
     if (certBuffer[offset - 1] != 0x02) {
-        throw new Error("Expected INTEGER");
+        console.error("Expected INTEGER");
+        return undefined;
     }
 
     return certBuffer.slice(offset + 1, offset + certBuffer[offset] + 1).toString('hex');
@@ -196,27 +207,38 @@ export function decodeSerialNumber(certBuffer) {
 
 export function decodeAKI(certBuffer) {
     if (certBuffer[0] != TAGS.SEQUENCE) {
-        throw new Error("Unexpected start of buffer");
+        console.error("Unexpected start of buffer");
+        return undefined;
     }
 
     let offset = 1;
 
     const seq1 = readASN1Length(certBuffer, offset);
 
+    if (seq1 === undefined) {
+        return undefined;
+    }
+
     offset += seq1.lengthOfLength + 2;
 
     const seq2 = readASN1Length(certBuffer, offset);
 
+    if (seq2 === undefined) {
+        return undefined;
+    }
+
     offset += seq2.lengthOfLength + 2;
 
     if (certBuffer[offset - 1] !== TAGS.CONTEXT_SPECIFIC_ZERO) {
-        throw new Error("Expected context specific zero");
+        console.error("Expected context specific zero");
+        return undefined;
     }
 
     offset += certBuffer[offset] + 2;
 
     if (certBuffer[offset - 1] != 0x02) {
-        throw new Error("Expected INTEGER");
+        console.error("Expected INTEGER");
+        return undefined;
     }
 
     offset += certBuffer[offset] + 2;
@@ -224,20 +246,36 @@ export function decodeAKI(certBuffer) {
     while (certBuffer[offset - 1] !== TAGS.CONTEXT_SPECIFIC_THREE) {
         const skipSequences = readASN1Length(certBuffer, offset);
 
+        if (skipSequences === undefined) {
+            return undefined;
+        }
+
         offset += skipSequences.length + skipSequences.lengthOfLength + 1;
     }
 
     const seq5 = readASN1Length(certBuffer, offset);
 
+    if (seq5 === undefined) {
+        return undefined;
+    }
+
     offset += seq5.lengthOfLength + 2;
 
     const seq6 = readASN1Length(certBuffer, offset);
+
+    if (seq6 === undefined) {
+        return undefined;
+    }
 
     offset += seq6.lengthOfLength + 2;
 
     let inner1;
     while (true) {
         const seq7 = readASN1Length(certBuffer, offset);
+
+        if (seq7 === undefined) {
+            return undefined;
+        }
         inner1 = certBuffer.slice(offset + 1, offset + 1 + seq7.length);
         if (walkExtensions(inner1)) {
             offset += seq7.lengthOfLength + 2;
@@ -256,6 +294,10 @@ export function decodeAKI(certBuffer) {
     offset1 = 0;
 
     const seq7 = readASN1Length(slice1, offset1);
+
+    if (seq7 === undefined) {
+        return undefined;
+    }
 
     offset1 += seq7.lengthOfLength + 2;
 
@@ -282,7 +324,8 @@ export function pemToBuffer(pemCertificate) {
 
 export function readASN1Length(buffer, offset) {
     if (offset >= buffer.length) {
-        throw new Error("Offset is out of bounds");
+        console.log("Offset is out of bounds");
+        return undefined;
     }
 
     const lengthByte = buffer[offset];
@@ -293,11 +336,13 @@ export function readASN1Length(buffer, offset) {
 
     const lengthOfLength = lengthByte & 0x7F;
     if (lengthOfLength === 0) {
-        throw new Error("Indefinite length is not supported");
+        console.log("Indefinite length is not supported");
+        return undefined;
     }
 
     if (offset + lengthOfLength >= buffer.length) {
-        throw new Error("Length of length exceeds buffer size");
+        console.log("Length of length exceeds buffer size");
+        return undefined;
     }
 
     let length = 0;
@@ -310,7 +355,8 @@ export function readASN1Length(buffer, offset) {
 
 export function bytesToOID(byteArray) {
     if (byteArray[0] !== 0x06) {
-        throw new Error("The first byte must be 0x06 for OID.");
+        console.log("The first byte must be 0x06 for OID.");
+        return undefined;
     }
 
     const length = byteArray[1];
