@@ -1,34 +1,5 @@
 import * as asn1 from "../asn1.js"
 
-let cert = `-----BEGIN CERTIFICATE-----
-MIIC3zCCAcegAwIBAgIFAIdlQyEwDQYJKoZIhvcNAQELBQAwFTETMBEGA1UEAwwK
-RXhhbXBsZSBDQTAeFw01MDAxMDEwMDAwMDBaFw01MDAxMDEwMDAwMDBaMBYxFDAS
-BgNVBAMMC2V4YW1wbGUuY29tMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKC
-AQEAy3VnrpBZT8VcByJKAu4zIrAVu14cRlipEuQMHSe9Psa7vvXzoJQD6Uc4/mwz
-o7m+3yaRM8eSQWSc4AraBfqkRfSNP+wwygVqfbHcWOe9/v3uai1IfCKT+WryszP3
-ahN/ceMqRc1axukk7bO5KeLlj4/wUGgq+zYhAF4ZJcolwwD4M8qUTgplKWLzhpZz
-BbJlvQCi2sAkQDH0d7hice56BBY2X7d35T65MAeeVKFxXOWN59HMgitLCDK0E9Mf
-GJJHriSB3iW39zNiasyTupZFhrNS8G/5NGd0oqAlkkj/Jb7cX9w0RfCJw5sEfpL6
-lDtqgF0VyfRhSYdEzYAMoSaeGwIDAQABozUwMzAxBgNVHSMEKjAogBRpiFtrh0ZA
-QeGze4R7oK4s3gHI1KENhgtFWEFNUExFLkNPTYIBATANBgkqhkiG9w0BAQsFAAOC
-AQEAchL9etTHAaaJ1h1xqbIR7dL7QcHodSL8tGgsWww0/g+XqcRy/Y9TJV1zLhJs
-UnrPC7mWRGsn+aTD/VBJwd+K6i7gbQ5WDvY+AClFUTJNtwOxT+hZxm0KdkWXfRJc
-ciejEynaxypoZy4i73uM9inPea8mDKwdOD3ZTDAJqVCBGyJN1BRqVCte8aWNA/ls
-htw6KK8Uusn6mGBuEw+dYHhN/T+1ouKiYYYAoeDU7wq+qKdNb1wcBeQGOCro2C9K
-4izzQ1FXpYc+wh8MceTtYDIrI+Wszhwb/S/1K5uD1sJ9F033gzNj8e61dMQtdPr9
-xcE1fgyXJnOFsRliMCw6R7IsDA==
------END CERTIFICATE-----`;
-
-let buffer = asn1.pemToBuffer(cert);
-
-let aki = asn1.decodeAKI(buffer);
-
-let serial = asn1.decodeSerialNumber(buffer);
-
-console.log(serial === "0087654321", aki === "69885b6b87464041e1b37b847ba0ae2cde01c8d4", aki.includes("69885b6b87464041e1b37b847ba0ae2cde01c8d4"));
-
-console.log("");
-
 let cert2 = `-----BEGIN CERTIFICATE-----
 MIIDtjCCAzugAwIBAgISK1rvUtJhWROMvjmPX10Woba9MAoGCCqGSM49BAMDMFIx
 CzAJBgNVBAYTAlVTMSAwHgYDVQQKExcoU1RBR0lORykgTGV0J3MgRW5jcnlwdDEh
@@ -87,3 +58,32 @@ let aki1 = asn1.decodeAKI(buffer1);
 let serial1 = asn1.decodeSerialNumber(buffer1);
 
 console.log(aki1 === "fc46d101435fbb7ba63d3068ae11bae0bc6dc9d3", serial1 === "2b5aef52d26159138cbe398f5f5d16a1b6bd");
+
+let cert = `-----BEGIN CERTIFICATE-----
+MIIC3zCCAcegAwIBAgIFAIdlQyEwDQYJKoZIhvcNAQELBQAwFTETMBEGA1UEAwwK
+RXhhbXBsZSBDQTAeFw01MDAxMDEwMDAwMDBaFw01MDAxMDEwMDAwMDBaMBYxFDAS
+BgNVBAMMC2V4YW1wbGUuY29tMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKC
+AQEAy3VnrpBZT8VcByJKAu4zIrAVu14cRlipEuQMHSe9Psa7vvXzoJQD6Uc4/mwz
+o7m+3yaRM8eSQWSc4AraBfqkRfSNP+wwygVqfbHcWOe9/v3uai1IfCKT+WryszP3
+ahN/ceMqRc1axukk7bO5KeLlj4/wUGgq+zYhAF4ZJcolwwD4M8qUTgplKWLzhpZz
+BbJlvQCi2sAkQDH0d7hice56BBY2X7d35T65MAeeVKFxXOWN59HMgitLCDK0E9Mf
+GJJHriSB3iW39zNiasyTupZFhrNS8G/5NGd0oqAlkkj/Jb7cX9w0RfCJw5sEfpL6
+lDtqgF0VyfRhSYdEzYAMoSaeGwIDAQABozUwMzAxBgNVHSMEKjAogBRpiFtrh0ZA
+QeGze4R7oK4s3gHI1KENhgtFWEFNUExFLkNPTYIBATANBgkqhkiG9w0BAQsFAAOC
+AQEAchL9etTHAaaJ1h1xqbIR7dL7QcHodSL8tGgsWww0/g+XqcRy/Y9TJV1zLhJs
+UnrPC7mWRGsn+aTD/VBJwd+K6i7gbQ5WDvY+AClFUTJNtwOxT+hZxm0KdkWXfRJc
+ciejEynaxypoZy4i73uM9inPea8mDKwdOD3ZTDAJqVCBGyJN1BRqVCte8aWNA/ls
+htw6KK8Uusn6mGBuEw+dYHhN/T+1ouKiYYYAoeDU7wq+qKdNb1wcBeQGOCro2C9K
+4izzQ1FXpYc+wh8MceTtYDIrI+Wszhwb/S/1K5uD1sJ9F033gzNj8e61dMQtdPr9
+xcE1fgyXJnOFsRliMCw6R7IsDA==
+-----END CERTIFICATE-----`;
+
+let buffer = asn1.pemToBuffer(cert);
+
+let aki = asn1.decodeAKI(buffer);
+
+let serial = asn1.decodeSerialNumber(buffer);
+
+console.log(serial === "0087654321", aki === "69885b6b87464041e1b37b847ba0ae2cde01c8d4", aki.includes("69885b6b87464041e1b37b847ba0ae2cde01c8d4"));
+
+console.log("");
