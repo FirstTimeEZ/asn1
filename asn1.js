@@ -210,21 +210,21 @@ export function decodeAKI(certBuffer) {
 
     let offset = 0;
 
-    const certificate = readOuterSequence(certBuffer, 0);
+    const certificate = readOuterSequence(certBuffer);
 
     if (certificate === undefined) {
         console.log("Expected outer certificate");
         return undefined;
     }
 
-    const tbsCertficate = readOuterSequence(certificate[0], 0);
+    const tbsCertficate = readOuterSequence(certificate);
 
     if (tbsCertficate === undefined) {
         console.log("Expected inner certificate");
         return undefined;
     }
 
-    if (tbsCertficate[0][0] !== TAGS.CONTEXT_SPECIFIC_ZERO) { // Version should be the first element
+    if (tbsCertficate[0] !== TAGS.CONTEXT_SPECIFIC_ZERO) { // Version should be the first element
         console.log("Expected version");
         return undefined;
     }
@@ -232,11 +232,11 @@ export function decodeAKI(certBuffer) {
         offset++;
     }
 
-    const versionLen = readASN1Length(tbsCertficate[0], offset);  // skip version length;
+    const versionLen = readASN1Length(tbsCertficate, offset);  // skip version length;
 
     offset += versionLen.length + versionLen.lengthOfLength;
 
-    if (tbsCertficate[0][offset] !== TAGS.INTEGER) {
+    if (tbsCertficate[offset] !== TAGS.INTEGER) {
         console.log("Expected serial");
         return undefined;
     }
@@ -244,11 +244,11 @@ export function decodeAKI(certBuffer) {
         offset++;
     }
 
-    const serialNumberLen = readASN1Length(tbsCertficate[0], offset);  // skip serial number;
+    const serialNumberLen = readASN1Length(tbsCertficate, offset);  // skip serial number;
 
     offset += serialNumberLen.length + serialNumberLen.lengthOfLength;
 
-    if (tbsCertficate[0][offset] !== TAGS.SEQUENCE) {
+    if (tbsCertficate[offset] !== TAGS.SEQUENCE) {
         console.log("Expected a sequence after the serial number");
         return undefined;
     }
@@ -256,34 +256,48 @@ export function decodeAKI(certBuffer) {
         offset++;
     }
 
-    while (tbsCertficate[0][offset - 1] !== TAGS.CONTEXT_SPECIFIC_THREE) { // find extensions by looking for CONTEXT_SPECIFIC_THREE
-        const skipSequences = readASN1Length(tbsCertficate[0], offset);
+    let check = true;
+
+    while (tbsCertficate[offset - 1] !== TAGS.CONTEXT_SPECIFIC_THREE) { // find extensions by looking for CONTEXT_SPECIFIC_THREE
+        const skipSequences = readASN1Length(tbsCertficate, offset);
 
         if (skipSequences === undefined) {
             console.log("Not a sequence", offset);
+
             return undefined;
         }
         else {
+            if (tbsCertficate[offset] === 0xA3) {
+                check = false;
+                offset++;
+                break;
+            }
+
             offset++;
             offset += skipSequences.length + skipSequences.lengthOfLength;
         }
     }
 
-    if (tbsCertficate[0][offset - 1] !== TAGS.CONTEXT_SPECIFIC_THREE) {
+    if (check && tbsCertficate[offset - 1] !== TAGS.CONTEXT_SPECIFIC_THREE) {
         console.log("Expected context specific 3 (extensions)");
         return undefined;
     }
 
-    const extensions = readASN1Length(tbsCertficate[0], offset); // extensions [3] (1 elem)
+    const extensions = readASN1Length(tbsCertficate, offset); // extensions [3] (1 elem)
 
     if (extensions === undefined) {
         console.log("Expected extensions");
         return undefined;
     }
 
-    offset += extensions.lengthOfLength + 2;
-
-    const outerSequence = readOuterSequence(tbsCertficate[0].slice(offset - 1, offset + extensions.length));
+    offset += extensions.lengthOfLength;
+    let outerSequence = null;
+    if (!check) {
+        outerSequence = readOuterSequence(tbsCertficate.slice(offset - 1, offset + extensions.length + 1));
+    }
+    else {
+        outerSequence = readOuterSequence(tbsCertficate.slice(offset + 1, offset + extensions.length + 1));
+    }
 
     if (outerSequence === undefined) {
         console.log("Expected outer sequence of extensions");
@@ -308,14 +322,10 @@ export function decodeAKI(certBuffer) {
         return undefined;
     }
 
-    const AKI = readOuterSequence(rawAKI.slice(rawAKI[1] + 4))[0].slice(1).toString('hex'); // 2.5.29.35 (4bytes) // SEQUENCE extnValue OCTET STRING (4 byte) 301680 // [0] (20 byte) FC46D101435FBB7BA63D3068AE11BAE0BC6DC9D3
+    const akiParts = readSequenceParts(rawAKI);
+    const akiLength = readASN1Length(akiParts[1], 0);
 
-    if (AKI === undefined) {
-        console.log("Failed to slice the AKI");
-        return undefined;
-    }
-
-    return AKI;
+    return akiParts[1].slice(akiLength.lengthOfLength + 3, (akiLength.lengthOfLength + akiLength.length) / 2).toString('hex'); // 2.5.29.35 (4bytes)
 }
 
 export function pemToBuffer(pemCertificate) {
@@ -387,24 +397,15 @@ export function bytesToOID(byteArray) {
 }
 
 export function readOuterSequence(certBuffer) {
-    const parts = [];
-
-    let start = 1;
-
-    const seq1 = readASN1Length(certBuffer, start);
+    const seq1 = readASN1Length(certBuffer, 1);
 
     if (seq1 != undefined) {
+        const start = 2 + seq1.lengthOfLength;
 
-        start += start + seq1.lengthOfLength;
-
-        let v = certBuffer.slice(start, start + seq1.length);
-
-        start += seq1.length + 2;
-
-        parts.push(v);
+        return certBuffer.slice(start, start + seq1.length);
     }
 
-    return parts.length > 0 ? parts : undefined;
+    return undefined;
 }
 
 export function readSequenceParts(innerSequence) {
@@ -414,17 +415,15 @@ export function readSequenceParts(innerSequence) {
 
     while (start < innerSequence.length) {
         const seq1 = readASN1Length(innerSequence, start);
+
         if (seq1 != undefined) {
             start += seq1.lengthOfLength;
 
-            let v = innerSequence.slice(start, start + seq1.length);
+            seq1.lengthOfLength === 2 && (start++);
+
+            parts.push(innerSequence.slice(start, start + seq1.length));
 
             start += seq1.length + 1;
-
-            parts.push(v);
-        }
-        else {
-            break;
         }
     }
 
