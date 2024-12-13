@@ -204,6 +204,7 @@ export function decodeSerialNumber(certBuffer) {
 
 export function decodeAKI(certBuffer) {
     if (certBuffer[0] != TAGS.SEQUENCE) { // Cert Starts with SEQUENCE
+        console.log("Certificate should start with a sequence");
         return undefined;
     }
 
@@ -212,16 +213,19 @@ export function decodeAKI(certBuffer) {
     const certificate = readOuterSequence(certBuffer, 0);
 
     if (certificate === undefined) {
+        console.log("Expected outer certificate");
         return undefined;
     }
 
     const tbsCertficate = readOuterSequence(certificate[0], 0);
 
     if (tbsCertficate === undefined) {
+        console.log("Expected inner certificate");
         return undefined;
     }
 
     if (tbsCertficate[0][0] !== TAGS.CONTEXT_SPECIFIC_ZERO) { // Version should be the first element
+        console.log("Expected version");
         return undefined;
     }
     else {
@@ -233,6 +237,7 @@ export function decodeAKI(certBuffer) {
     offset += versionLen.length + versionLen.lengthOfLength;
 
     if (tbsCertficate[0][offset] !== TAGS.INTEGER) {
+        console.log("Expected serial");
         return undefined;
     }
     else {
@@ -255,6 +260,7 @@ export function decodeAKI(certBuffer) {
         const skipSequences = readASN1Length(tbsCertficate[0], offset);
 
         if (skipSequences === undefined) {
+            console.log("Not a sequence", offset);
             return undefined;
         }
         else {
@@ -264,30 +270,52 @@ export function decodeAKI(certBuffer) {
     }
 
     if (tbsCertficate[0][offset - 1] !== TAGS.CONTEXT_SPECIFIC_THREE) {
+        console.log("Expected context specific 3 (extensions)");
         return undefined;
     }
 
     const extensions = readASN1Length(tbsCertficate[0], offset); // extensions [3] (1 elem)
 
     if (extensions === undefined) {
+        console.log("Expected extensions");
         return undefined;
     }
 
     offset += extensions.lengthOfLength + 2;
 
-    const innerExtensions = readSequenceParts(readOuterSequence(tbsCertficate[0].slice(offset - 1, offset + extensions.length))[0]); // Extensions SEQUENCE (9 elem)
+    const outerSequence = readOuterSequence(tbsCertficate[0].slice(offset - 1, offset + extensions.length));
 
-    let rawAKI = null;
+    if (outerSequence === undefined) {
+        console.log("Expected outer sequence of extensions");
+        return undefined;
+    }
+
+    const innerExtensions = readSequenceParts(outerSequence); // Extensions SEQUENCE (9 elem)
+
+    if (innerExtensions === undefined) {
+        console.log("Expected inner sequence of extensions");
+        return undefined;
+    }
+
+    let rawAKI = undefined;
 
     for (let index = 0; index < innerExtensions.length; index++) {
         bytesToOID(innerExtensions[index]) === "2.5.29.35" && (rawAKI = innerExtensions[index]);
     }
 
-    if (rawAKI === null) {
+    if (rawAKI === undefined) {
+        console.log("Unable to convert OID bytes into AKI bytes")
         return undefined;
     }
 
-    return readOuterSequence(rawAKI.slice(rawAKI[1] + 4))[0].slice(1).toString('hex'); // 2.5.29.35 (4bytes) // SEQUENCE extnValue OCTET STRING (4 byte) 301680 // [0] (20 byte) FC46D101435FBB7BA63D3068AE11BAE0BC6DC9D3
+    const AKI = readOuterSequence(rawAKI.slice(rawAKI[1] + 4))[0].slice(1).toString('hex'); // 2.5.29.35 (4bytes) // SEQUENCE extnValue OCTET STRING (4 byte) 301680 // [0] (20 byte) FC46D101435FBB7BA63D3068AE11BAE0BC6DC9D3
+
+    if (AKI === undefined) {
+        console.log("Failed to slice the AKI");
+        return undefined;
+    }
+
+    return AKI;
 }
 
 export function pemToBuffer(pemCertificate) {
@@ -376,7 +404,7 @@ export function readOuterSequence(certBuffer) {
         parts.push(v);
     }
 
-    return parts;
+    return parts.length > 0 ? parts : undefined;
 }
 
 export function readSequenceParts(innerSequence) {
@@ -400,5 +428,5 @@ export function readSequenceParts(innerSequence) {
         }
     }
 
-    return parts;
+    return parts.length > 0 ? parts : undefined;
 }
