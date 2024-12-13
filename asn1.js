@@ -203,108 +203,91 @@ export function decodeSerialNumber(certBuffer) {
 }
 
 export function decodeAKI(certBuffer) {
-    if (certBuffer[0] != TAGS.SEQUENCE) {
+    if (certBuffer[0] != TAGS.SEQUENCE) { // Cert Starts with SEQUENCE
         return undefined;
     }
 
-    let offset = 1;
+    let offset = 0;
 
-    const seq1 = readASN1Length(certBuffer, offset);
+    const certificate = readOuterSequence(certBuffer, 0);
 
-    if (seq1 === undefined) {
+    if (certificate === undefined) {
         return undefined;
     }
 
-    offset += seq1.lengthOfLength + 2;
+    const tbsCertficate = readOuterSequence(certificate[0], 0);
 
-    const seq2 = readASN1Length(certBuffer, offset);
-
-    if (seq2 === undefined) {
+    if (tbsCertficate === undefined) {
         return undefined;
     }
 
-    offset += seq2.lengthOfLength + 2;
-
-    if (certBuffer[offset - 1] !== TAGS.CONTEXT_SPECIFIC_ZERO) {
+    if (tbsCertficate[0][0] !== TAGS.CONTEXT_SPECIFIC_ZERO) { // Version should be the first element
         return undefined;
     }
-
-    offset += certBuffer[offset] + 2;
-
-    if (certBuffer[offset - 1] != 0x02) {
-        return undefined;
+    else {
+        offset++;
     }
 
-    offset += certBuffer[offset] + 2;
+    const versionLen = readASN1Length(tbsCertficate[0], offset);  // skip version length;
 
-    while (certBuffer[offset - 1] !== TAGS.CONTEXT_SPECIFIC_THREE) {
-        const skipSequences = readASN1Length(certBuffer, offset);
+    offset += versionLen.length + versionLen.lengthOfLength;
+
+    if (tbsCertficate[0][offset] !== TAGS.INTEGER) {
+        return undefined;
+    }
+    else {
+        offset++;
+    }
+
+    const serialNumberLen = readASN1Length(tbsCertficate[0], offset);  // skip serial number;
+
+    offset += serialNumberLen.length + serialNumberLen.lengthOfLength;
+
+    if (tbsCertficate[0][offset] !== TAGS.SEQUENCE) {
+        console.log("Expected a sequence after the serial number");
+        return undefined;
+    }
+    else {
+        offset++;
+    }
+
+    while (tbsCertficate[0][offset - 1] !== TAGS.CONTEXT_SPECIFIC_THREE) { // find extensions by looking for CONTEXT_SPECIFIC_THREE
+        const skipSequences = readASN1Length(tbsCertficate[0], offset);
 
         if (skipSequences === undefined) {
             return undefined;
         }
-
-        offset += skipSequences.length + skipSequences.lengthOfLength + 1;
-    }
-
-    const seq5 = readASN1Length(certBuffer, offset);
-
-    if (seq5 === undefined) {
-        return undefined;
-    }
-
-    offset += seq5.lengthOfLength + 2;
-
-    const seq6 = readASN1Length(certBuffer, offset);
-
-    if (seq6 === undefined) {
-        return undefined;
-    }
-
-    offset += seq6.lengthOfLength + 2;
-
-    let inner1;
-    while (true) {
-        const seq7 = readASN1Length(certBuffer, offset);
-
-        if (seq7 === undefined) {
-            return undefined;
-        }
-        inner1 = certBuffer.slice(offset + 1, offset + 1 + seq7.length);
-        if (walkExtensions(inner1)) {
-            offset += seq7.lengthOfLength + 2;
-            break;
-        }
         else {
-            offset += seq7.length + seq7.lengthOfLength + 1;
+            offset++;
+            offset += skipSequences.length + skipSequences.lengthOfLength;
         }
     }
 
-    let offset1 = 0;
-    offset1 += inner1[1] + 2;
-
-    const slice1 = inner1.slice(offset1 + 2);
-
-    offset1 = 0;
-
-    const seq7 = readASN1Length(slice1, offset1);
-
-    if (seq7 === undefined) {
+    if (tbsCertficate[0][offset - 1] !== TAGS.CONTEXT_SPECIFIC_THREE) {
         return undefined;
     }
 
-    offset1 += seq7.lengthOfLength + 2;
+    const extensions = readASN1Length(tbsCertficate[0], offset); // extensions [3] (1 elem)
 
-    const inner2 = slice1.slice(offset1 + 1, offset1 + 1 + seq7.length + 2);
-
-    return inner2.toString('hex');
-
-    function walkExtensions(inner) {
-        const seq7 = readASN1Length(inner, 1);
-        const inner1 = certBuffer.slice(offset + 1, offset + 1 + seq7.length + 2);
-        const v = bytesToOID(inner1);
-        return v === "2.5.29.35";
+    if (extensions === undefined) {
+        return undefined;
     }
+
+    offset += extensions.lengthOfLength + 2;
+
+    const innerExtensions = readSequenceParts(readOuterSequence(tbsCertficate[0].slice(offset - 1, offset + extensions.length))[0]); // Extensions SEQUENCE (9 elem)
+
+    let rawAKI = null;
+
+    for (let index = 0; index < innerExtensions.length; index++) {
+        bytesToOID(innerExtensions[index]) === "2.5.29.35" && (rawAKI = innerExtensions[index]);
+    }
+
+    if (rawAKI === null) {
+        return undefined;
+    }
+
+    return readOuterSequence(rawAKI.slice(rawAKI[1] + 4))[0].slice(1).toString('hex'); // 2.5.29.35 (4bytes) // SEQUENCE extnValue OCTET STRING (4 byte) 301680 // [0] (20 byte) FC46D101435FBB7BA63D3068AE11BAE0BC6DC9D3
 }
 
 export function pemToBuffer(pemCertificate) {
@@ -373,4 +356,49 @@ export function bytesToOID(byteArray) {
     }
 
     return oidComponents.join('.');
+}
+
+export function readOuterSequence(certBuffer) {
+    const parts = [];
+
+    let start = 1;
+
+    const seq1 = readASN1Length(certBuffer, start);
+
+    if (seq1 != undefined) {
+
+        start += start + seq1.lengthOfLength;
+
+        let v = certBuffer.slice(start, start + seq1.length);
+
+        start += seq1.length + 2;
+
+        parts.push(v);
+    }
+
+    return parts;
+}
+
+export function readSequenceParts(innerSequence) {
+    const parts = [];
+
+    let start = 1;
+
+    while (start < innerSequence.length) {
+        const seq1 = readASN1Length(innerSequence, start);
+        if (seq1 != undefined) {
+            start += seq1.lengthOfLength;
+
+            let v = innerSequence.slice(start, start + seq1.length);
+
+            start += seq1.length + 1;
+
+            parts.push(v);
+        }
+        else {
+            break;
+        }
+    }
+
+    return parts;
 }
